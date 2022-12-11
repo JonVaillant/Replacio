@@ -9,7 +9,15 @@ Pass the following settings:
 1. Search Directory path
 2. Search Query to find
 3. Replacement text
-4. Ignore text case of files VS query
+4. Ignore text case of files versus query
+
+#### Binary Usage
+
+```shell
+./replacio ../../search-dir 'search phrase' 'replacement phrase' ignore-case
+```
+
+#### Dev Usage
 
 ```shell
 cargo run -- ./search-dir 'search phrase' replacement ignore-case
