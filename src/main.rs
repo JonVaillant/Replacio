@@ -10,7 +10,7 @@ fn main() {
         process::exit(1);
     });
 
-    println!("In directory \"{}\"", config.dir_path);
+    println!("From directory \"{}\"", config.dir_path);
     println!("Searching for \"{}\"", config.query);
     println!("Replacing with \"{}\"", config.replacement_text);
 

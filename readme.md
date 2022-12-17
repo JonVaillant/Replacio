@@ -2,6 +2,7 @@
 
 Replace text in files, very quickly.
 
+
 ## Usage
 
 Pass the following settings:
@@ -13,15 +14,20 @@ Pass the following settings:
 
 #### Binary Usage
 
+With the binary compiled run:
+
 ```shell
 ./replacio ../../search-dir 'search phrase' 'replacement phrase' ignore-case
 ```
 
 #### Dev Usage
 
+With Rust & Cargo installed run:
+
 ```shell
 cargo run -- ./search-dir 'search phrase' replacement ignore-case
 ```
+
 
 ## Watch Out!
 
@@ -30,16 +36,25 @@ Be careful with your inputs otherwise you may not get your data back. Example mi
 - Performing a replacement from storage volume's root (replaces text in all files on disk)
 - Making a typo and running command (replace something else or something unexpected)
 
+
 ## Limitations
 
 - Can only handle UTF-8 files.
 - Not designed to handle multiple lines (yet).
+
+
+## Testing
+
+```shell
+cargo test
+```
+
 
 ## To-Do
 
 - [x] Add test for replace
 - [x] Test arguments containing spaces
 - [ ] Move replace logic out of search_file
-- [ ] Stop checking for match when replacing on matching results
 - [ ] Handle matches spanning multiple lines
 - [ ] Dry runs
+

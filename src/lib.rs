@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::{ env, error::Error };
+use std::{env, error::Error};
 use std::fs;
 
 pub struct Config {
@@ -34,92 +34,92 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let dir = Path::new(&config.dir_path);
 
     let found_paths = recursively_list_dir(dir)?;
-    search_files(&config, found_paths)?;
+    files_search_replace(&config, found_paths)?;
 
     Ok(())
-}
-
-pub fn search_files(config: &Config, found_paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
-    let mut search_results: Vec<PathBuf> = Vec::new();
-    
-    for p in found_paths {      
-        if true == search_file(&config, &p).unwrap_or(false) {
-            search_results.push(p);
-        }
-    }
-
-    // println!("# search results {:?}", search_results.len());
-
-    // for sr in search_results {
-    //     println!("file containing query: {:?}", sr.display());
-    // }
-
-    Ok(())
-}
-
-pub fn search_file(config: &Config, file_path: &PathBuf) -> Result<bool, Box<dyn Error>> {
-    let contents_result = fs::read_to_string(file_path);
-    if contents_result.is_err() {
-        // file is probably not UTF-8
-        return Ok(false)
-    };
-
-    let contents = contents_result?;
-
-    let results = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
-    } else {
-        search(&config.query, &contents)
-    };
-
-    let has_results = results.len() > 0;
-
-    if has_results {
-        let (did_replace, new_content): (bool, String) = if config.ignore_case {
-            replace_case_insensitive(&config, &contents)
-        } else {
-            replace(&config, &contents)
-        };
-
-        if did_replace {
-            fs::write(file_path, new_content)?;
-        }
-
-        println!("\nMatch in file {:?}:", file_path.display());
-
-        for line in results {
-            println!("{line}");
-        }
-
-        println!("---");
-    }
-
-    Ok(has_results)
 }
 
 pub fn recursively_list_dir(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     let mut paths: Vec<PathBuf> = Vec::new();
-    
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
 
-            if path.is_dir() {
-                let mut dir_paths = recursively_list_dir(&path)?;
-                paths.append(&mut dir_paths);
-            } else {
-                paths.push(path);
-            }
+    if false == dir.is_dir() {
+        println!("Input directory path is not a directory. Correct the path?");
+        return Ok(paths)
+    }
+    
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            let mut dir_paths = recursively_list_dir(&path)?;
+            paths.append(&mut dir_paths);
+        } else {
+            paths.push(path);
         }
-    } else {
-        println!("Provided directory path is not a directory");
     }
 
     Ok(paths)
 }
 
-pub fn replace(config: &Config, contents: &str) -> (bool, String) {
+pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
+    let do_replace = true;
+
+    for p in found_paths {
+        let contents_result = file_read(&p);
+        if contents_result.is_err() {
+            continue;
+        }
+        let contents = contents_result?;
+
+        if false == do_replace {
+            text_search(&config, &contents)?;
+            continue;
+        }
+
+        let (did_replace, new_content): (bool, String) = text_replace(&config, &contents)?;
+
+        if false == did_replace {
+            continue;
+        }
+
+        file_save(&p, &new_content)?;
+    }
+
+    Ok(())
+}
+
+pub fn file_read(file_path: &PathBuf) -> Result<String, std::io::Error> {
+    fs::read_to_string(file_path)
+}
+
+pub fn file_save(file_path: &PathBuf, new_content: &str) -> Result<(), std::io::Error> {
+    fs::write(file_path, new_content)
+}
+
+pub fn text_search(config: &Config, contents: &str) -> Result<bool, Box<dyn Error>> {
+    let results = if config.ignore_case {
+        search_case_insensitive(&config.query, &contents)
+    } else {
+        search_case_sensitive(&config.query, &contents)
+    };
+
+    let has_results = results.len() > 0;
+
+    Ok(has_results)
+}
+
+pub fn text_replace(config: &Config, contents: &str) -> Result<(bool, String), Box<dyn Error>> {
+    let (did_replace, new_content): (bool, String) = if config.ignore_case {
+        replace_case_insensitive(&config, &contents)
+    } else {
+        replace_case_sensitive(&config, &contents)
+    };
+
+    Ok((did_replace, new_content))
+}
+
+pub fn replace_case_sensitive(config: &Config, contents: &str) -> (bool, String) {
     if false == contents.contains(&config.query) {
         return (false, String::new())
     }
@@ -148,18 +148,12 @@ pub fn replace_case_insensitive(config: &Config, contents: &str) -> (bool, Strin
     return (true, new_content)
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let mut lines_matching_query = Vec::new();
-
-    // let mut updated_lines: Vec<String> = Vec::new();
 
     for line in contents.lines() {
         if line.contains(query) {
-            // let updated_line = line.replace(&config.query, &config.replacement_text);
-            // updated_lines.push(updated_line.clone());
             lines_matching_query.push(line);
-        // } else {
-        //     updated_lines.push(line.to_owned());
         }
     }
     
@@ -191,7 +185,7 @@ Rust:
 safe, fast, productive.
 Duct tape.";
         
-        assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+        assert_eq!(vec!["safe, fast, productive."], search_case_sensitive(query, contents));
     }
 
     #[test]
@@ -222,7 +216,7 @@ Rust:
 safe, fast, productive.
 Duct tape.";
 
-        let (_success, new_content) = replace(&config, &contents);
+        let (_success, new_content) = replace_case_sensitive(&config, &contents);
 
         assert_eq!(
             "\
