@@ -109,7 +109,13 @@ pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Resul
             continue;
         }
 
-        let (did_replace, new_content): (bool, String) = text_replace(&config, &contents)?;
+        let replace_result = text_replace(&config, &contents);
+        if replace_result.is_err() {
+            eprintln!("File replace error: ${:?}", replace_result.unwrap_err());
+            continue;
+        }
+
+        let (did_replace, new_content): (bool, String) = replace_result?;
 
         if false == did_replace {
             continue;
@@ -156,23 +162,36 @@ pub fn replace_case_sensitive(config: &Config, contents: &str) -> (bool, String)
     return (true, new_contents)
 }
 
-pub fn replace_case_insensitive(config: &Config, contents: &str) -> (bool, String) {
-    if false == contents.to_lowercase().contains(&config.query.to_lowercase()) {
-        return (false, String::new());
+pub fn replace_case_insensitive(config: &Config, contents_in: &str) -> (bool, String) {
+    let query_lowercase = &config.query.to_lowercase();
+
+    let mut new_contents_backwards = String::new();
+    let mut new_contents_forwards = contents_in.to_string();
+    let mut found_match: bool = false;
+
+    while new_contents_forwards.len() > 0 {
+        let match_index = new_contents_forwards.to_lowercase().find(query_lowercase);
+
+        if match_index.is_none() {
+            new_contents_backwards += &new_contents_forwards;
+            new_contents_forwards = String::new();
+            continue;
+        }
+
+        found_match = true;
+
+        let content_before_match = &new_contents_forwards[..match_index.unwrap_or(0)];
+
+        // println!("at match, \n{}, \n{}", new_contents_forwards, content_before_match);
+
+        new_contents_backwards += &(content_before_match.to_owned() + &config.replacement_text);
+        // when removing the text from the text being fed in - we want to use the length of the original query (not the replacement text)
+        new_contents_forwards = new_contents_forwards[(content_before_match.len() + config.query.len())..].to_string();
+
+        // println!("clearing updated text from above match, \n{}, \n{}", new_contents_forwards, new_contents_forwards.len());
     }
 
-    let match_index = contents.to_lowercase().find(&config.query.to_lowercase());
-
-    if match_index.is_none() {
-        return (false, String::new())
-    }
-
-    let (content_before_query, content_from_query) = contents.split_at(match_index.unwrap());
-    let (_content_query, content_after_query) = content_from_query.split_at(config.query.len());
-
-    let new_content = content_before_query.to_owned() + &config.replacement_text + content_after_query;
-
-    return (true, new_content)
+    return (found_match, new_contents_backwards)
 }
 
 pub fn text_search<'a>(config: &Config, contents: &'a str) -> Result<(bool, Vec<&'a str>), Box<dyn Error>> {

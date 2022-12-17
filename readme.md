@@ -1,6 +1,6 @@
 # Replacio
 
-Replace text in files, very quickly.
+Replace text in files, very quickly (100 files per second).
 
 
 ## Usage
@@ -60,4 +60,5 @@ cargo test
 - [ ] Handle matches spanning multiple lines
 - [ ] Regular expressions
 - [x] Dry runs
-
+- [x] case-insensitive replace all
+- [ ] Test case-insensitive replace all
