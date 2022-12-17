@@ -58,5 +58,6 @@ cargo test
 - [x] Test arguments containing spaces
 - [x] Move replace logic out of search_file
 - [ ] Handle matches spanning multiple lines
+- [ ] Regular expressions
 - [x] Dry runs
 

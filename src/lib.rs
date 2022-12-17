@@ -28,7 +28,6 @@ impl Config {
         let (mut ignore_case, mut operation_replace) = (false, true);
         if num_args > flags_start_index {
             let flags = args.take(flags_start_index..).unwrap();
-            println!("args vs flags {} {}", args.len(), flags.len());
 
             for flag in flags {
                 if flag == "ignore-case" {
@@ -44,7 +43,7 @@ impl Config {
             ignore_case = true;
         }
 
-        if operation_replace == true && env::var("DRY").is_ok() {
+        if operation_replace && env::var("DRY").is_ok() {
             operation_replace = false;
         }
 
@@ -85,6 +84,8 @@ pub fn recursively_list_dir(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
 }
 
 pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
+    let mut update_count = 0;
+
     for p in found_paths {
         let contents_result = file_read(&p);
         if contents_result.is_err() {
@@ -93,7 +94,18 @@ pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Resul
         let contents = contents_result?;
 
         if false == config.operation_replace {
-            text_search(&config, &contents)?;
+            let (found_results, results) = text_search(&config, &contents)?;
+
+            if false == found_results {
+                continue;
+            }
+
+            println!("\nMatches in \"{}\":", p.display());
+
+            for result in results {
+                println!("- \"{}\"", result);
+            }
+
             continue;
         }
 
@@ -103,7 +115,14 @@ pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Resul
             continue;
         }
 
-        file_save(&p, &new_content)?;
+        if config.operation_replace {
+            file_save(&p, &new_content)?;
+            update_count += 1;
+        }
+    }
+
+    if config.operation_replace {
+        println!("\nUpdated {} files", update_count);
     }
 
     Ok(())
@@ -156,7 +175,7 @@ pub fn replace_case_insensitive(config: &Config, contents: &str) -> (bool, Strin
     return (true, new_content)
 }
 
-pub fn text_search(config: &Config, contents: &str) -> Result<bool, Box<dyn Error>> {
+pub fn text_search<'a>(config: &Config, contents: &'a str) -> Result<(bool, Vec<&'a str>), Box<dyn Error>> {
     let results = if config.ignore_case {
         search_case_insensitive(&config.query, &contents)
     } else {
@@ -165,7 +184,7 @@ pub fn text_search(config: &Config, contents: &str) -> Result<bool, Box<dyn Erro
 
     let has_results = results.len() > 0;
 
-    Ok(has_results)
+    Ok((has_results, results))
 }
 
 pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
@@ -182,15 +201,15 @@ pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str>
 
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
-    let mut results = Vec::new();
+    let mut lines_matching_query = Vec::new();
 
     for line in contents.lines() {
         if line.to_lowercase().contains(&query) {
-            results.push(line);
+            lines_matching_query.push(line);
         }
     }
 
-    results
+    lines_matching_query
 }
 
 #[cfg(test)]
