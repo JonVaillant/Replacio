@@ -13,6 +13,8 @@ fn main() {
     println!("From directory \"{}\"", config.dir_path);
     println!("Searching for \"{}\"", config.query);
     println!("Replacing with \"{}\"", config.replacement_text);
+    println!("Ignoring text-case? \"{}\"", config.ignore_case);
+    println!("Doing replace? \"{}\"", config.operation_replace);
 
     if let Err(e) = replacio::run(config) {
         eprintln!("Application error: ${e}");

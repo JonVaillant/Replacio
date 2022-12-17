@@ -1,3 +1,6 @@
+#![feature(slice_pattern)]
+#![feature(slice_take)]
+
 use std::path::{Path, PathBuf};
 use std::{env, error::Error};
 use std::fs;
@@ -7,10 +10,11 @@ pub struct Config {
     pub query: String,
     pub replacement_text: String,
     pub ignore_case: bool,
+    pub operation_replace: bool,
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
+    pub fn build(mut args: &[String]) -> Result<Config, &'static str> {
         let num_args = args.len();
         if num_args < 3 {
             return Err("not enough arguments");
@@ -20,13 +24,31 @@ impl Config {
         let query = args[2].clone();
         let replacement_text = args[3].clone();
         
-        let ignore_case: bool = if num_args == 5 {
-            args[4].contains("ignore-case")
-        } else {
-            env::var("IGNORE_CASE").is_ok()
-        };
+        let flags_start_index = 4;
+        let (mut ignore_case, mut operation_replace) = (false, true);
+        if num_args > flags_start_index {
+            let flags = args.take(flags_start_index..).unwrap();
+            println!("args vs flags {} {}", args.len(), flags.len());
 
-        Ok(Config { dir_path, query, replacement_text, ignore_case })
+            for flag in flags {
+                if flag == "ignore-case" {
+                    ignore_case = true;
+                }
+                if flag == "dry" {
+                    operation_replace = false;
+                }
+            }
+        }
+
+        if ignore_case == false && env::var("IGNORE_CASE").is_ok() {
+            ignore_case = true;
+        }
+
+        if operation_replace == true && env::var("DRY").is_ok() {
+            operation_replace = false;
+        }
+
+        Ok(Config { dir_path, query, replacement_text, ignore_case, operation_replace })
     }
 }
 
@@ -63,8 +85,6 @@ pub fn recursively_list_dir(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
 }
 
 pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
-    let do_replace = true;
-
     for p in found_paths {
         let contents_result = file_read(&p);
         if contents_result.is_err() {
@@ -72,7 +92,7 @@ pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Resul
         }
         let contents = contents_result?;
 
-        if false == do_replace {
+        if false == config.operation_replace {
             text_search(&config, &contents)?;
             continue;
         }
@@ -95,18 +115,6 @@ pub fn file_read(file_path: &PathBuf) -> Result<String, std::io::Error> {
 
 pub fn file_save(file_path: &PathBuf, new_content: &str) -> Result<(), std::io::Error> {
     fs::write(file_path, new_content)
-}
-
-pub fn text_search(config: &Config, contents: &str) -> Result<bool, Box<dyn Error>> {
-    let results = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
-    } else {
-        search_case_sensitive(&config.query, &contents)
-    };
-
-    let has_results = results.len() > 0;
-
-    Ok(has_results)
 }
 
 pub fn text_replace(config: &Config, contents: &str) -> Result<(bool, String), Box<dyn Error>> {
@@ -146,6 +154,18 @@ pub fn replace_case_insensitive(config: &Config, contents: &str) -> (bool, Strin
     let new_content = content_before_query.to_owned() + &config.replacement_text + content_after_query;
 
     return (true, new_content)
+}
+
+pub fn text_search(config: &Config, contents: &str) -> Result<bool, Box<dyn Error>> {
+    let results = if config.ignore_case {
+        search_case_insensitive(&config.query, &contents)
+    } else {
+        search_case_sensitive(&config.query, &contents)
+    };
+
+    let has_results = results.len() > 0;
+
+    Ok(has_results)
 }
 
 pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
@@ -208,7 +228,8 @@ Trust me.";
             dir_path: "./test".to_string(),
             query: "Duct t".to_string(),
             replacement_text: "Gr".to_string(),
-            ignore_case: false
+            ignore_case: false,
+            operation_replace: true
         };
 
         let contents = "\
@@ -233,7 +254,8 @@ Grape.",
             dir_path: "./test".to_string(),
             query: "duct t".to_string(),
             replacement_text: "Gr".to_string(),
-            ignore_case: true
+            ignore_case: true,
+            operation_replace: true
         };
 
         let contents = "\

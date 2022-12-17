@@ -10,11 +10,13 @@ Pass the following settings:
 1. Search Directory path
 2. Search Query to find
 3. Replacement text
-4. Ignore text case of files versus query
+4. Flags
+    - `ignore-case` to ignore text case (uppercase VS lowercase)
+    - `dry` to search and not replace
 
 #### Binary Usage
 
-With the binary compiled run:
+After compiling the binary, run it:
 
 ```shell
 ./replacio ../../search-dir 'search phrase' 'replacement phrase' ignore-case
@@ -25,7 +27,7 @@ With the binary compiled run:
 With Rust & Cargo installed run:
 
 ```shell
-cargo run -- ./search-dir 'search phrase' replacement ignore-case
+cargo run -- ./search-dir 'search phrase' replacement dry ignore-case
 ```
 
 
@@ -54,7 +56,7 @@ cargo test
 
 - [x] Add test for replace
 - [x] Test arguments containing spaces
-- [ ] Move replace logic out of search_file
+- [x] Move replace logic out of search_file
 - [ ] Handle matches spanning multiple lines
-- [ ] Dry runs
+- [x] Dry runs
 
