@@ -121,10 +121,8 @@ pub fn files_search_replace(config: &Config, found_paths: Vec<PathBuf>) -> Resul
             continue;
         }
 
-        if config.operation_replace {
-            file_save(&p, &new_content)?;
-            update_count += 1;
-        }
+        file_save(&p, &new_content)?;
+        update_count += 1;
     }
 
     if config.operation_replace {
@@ -182,13 +180,9 @@ pub fn replace_case_insensitive(config: &Config, contents_in: &str) -> (bool, St
 
         let content_before_match = &new_contents_forwards[..match_index.unwrap_or(0)];
 
-        // println!("at match, \n{}, \n{}", new_contents_forwards, content_before_match);
-
         new_contents_backwards += &(content_before_match.to_owned() + &config.replacement_text);
         // when removing the text from the text being fed in - we want to use the length of the original query (not the replacement text)
         new_contents_forwards = new_contents_forwards[(content_before_match.len() + config.query.len())..].to_string();
-
-        // println!("clearing updated text from above match, \n{}, \n{}", new_contents_forwards, new_contents_forwards.len());
     }
 
     return (found_match, new_contents_backwards)
@@ -308,6 +302,58 @@ Duct tape.";
 Rust:
 safe, fast, productive.
 Grape.",
+            new_content
+        );
+    }
+
+    #[test]
+    fn case_insensitive_replace_all() {
+        let config = Config {
+            dir_path: "./test".to_string(),
+            query: "duct".to_string(),
+            replacement_text: "Grape".to_string(),
+            ignore_case: true,
+            operation_replace: true
+        };
+
+        let contents = "\
+Rust:
+safe, fast, duct, productive.
+Duct tape.";
+
+        let (_success, new_content): (bool, String) = text_replace(&config, &contents).unwrap();
+
+        assert_eq!(
+            "\
+Rust:
+safe, fast, Grape, proGrapeive.
+Grape tape.",
+            new_content
+        );
+    }
+
+    #[test]
+    fn case_sensitive_replace_all() {
+        let config = Config {
+            dir_path: "./test".to_string(),
+            query: "duct".to_string(),
+            replacement_text: "Grape".to_string(),
+            ignore_case: false,
+            operation_replace: true
+        };
+
+        let contents = "\
+Rust:
+safe, fast, duct, productive.
+Duct tape.";
+
+        let (_success, new_content): (bool, String) = text_replace(&config, &contents).unwrap();
+
+        assert_eq!(
+            "\
+Rust:
+safe, fast, Grape, proGrapeive.
+Duct tape.",
             new_content
         );
     }

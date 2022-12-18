@@ -61,4 +61,4 @@ cargo test
 - [ ] Regular expressions
 - [x] Dry runs
 - [x] case-insensitive replace all
-- [ ] Test case-insensitive replace all
+- [x] Test case-insensitive replace all
